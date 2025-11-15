@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-const { encode } = require('@toon-format/toon');
-const fs = require('fs');
+import { encode } from '@toon-format/toon';
 
 // Read JSON from stdin
 let input = '';

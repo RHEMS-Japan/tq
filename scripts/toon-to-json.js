@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-const { decode } = require('@toon-format/toon');
-const fs = require('fs');
+import { decode } from '@toon-format/toon';
+import { readFileSync } from 'fs';
 
 // Read TOON from stdin or file
 let input = '';
 
 if (process.argv[2]) {
   // Read from file
-  input = fs.readFileSync(process.argv[2], 'utf8');
+  input = readFileSync(process.argv[2], 'utf8');
 } else {
   // Read from stdin (not implemented for simplicity in first version)
   console.error('Please provide a file path');
