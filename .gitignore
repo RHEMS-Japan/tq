@@ -1,5 +1,5 @@
-# Binaries
-tq
+# Binaries (exclude at root level only)
+/tq
 *.exe
 *.dll
 *.so
