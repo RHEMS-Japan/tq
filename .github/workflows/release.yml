@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Get version
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+  build:
+    name: Build binaries
+    needs: release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            suffix: ''
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            suffix: ''
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            suffix: ''
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            suffix: ''
+          - os: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            suffix: '.exe'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        go build -v -ldflags "-X main.version=${{ needs.release.outputs.version }}" -o tq${{ matrix.suffix }} ./cmd/tq
+
+    - name: Create archive
+      run: |
+        mkdir -p tq-${{ matrix.goos }}-${{ matrix.goarch }}
+        cp tq${{ matrix.suffix }} tq-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r scripts tq-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r node_modules tq-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp README.md LICENSE tq-${{ matrix.goos }}-${{ matrix.goarch }}/
+
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          zip -r tq-${{ matrix.goos }}-${{ matrix.goarch }}.zip tq-${{ matrix.goos }}-${{ matrix.goarch }}
+          echo "ASSET_PATH=tq-${{ matrix.goos }}-${{ matrix.goarch }}.zip" >> $GITHUB_ENV
+          echo "ASSET_NAME=tq-${{ matrix.goos }}-${{ matrix.goarch }}.zip" >> $GITHUB_ENV
+        else
+          tar czf tq-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tq-${{ matrix.goos }}-${{ matrix.goarch }}
+          echo "ASSET_PATH=tq-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_NAME=tq-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" >> $GITHUB_ENV
+        fi
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ${{ env.ASSET_PATH }}
+        asset_name: ${{ env.ASSET_NAME }}
+        asset_content_type: application/octet-stream

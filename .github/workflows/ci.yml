@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: ['1.20', '1.21', '1.22']
+        node: ['18', '20']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node }}
+
+    - name: Install jq
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y jq
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install jq
+        fi
+      shell: bash
+
+    - name: Install Node.js dependencies
+      run: npm install
+
+    - name: Build
+      run: go build -v ./cmd/tq
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Test basic functionality
+      run: |
+        ./tq --version
+        ./tq '.' testdata/sample.toon
+        ./tq '.name' testdata/sample.toon
+        ./tq '.users[0]' testdata/users.toon
+        ./tq --json '.' testdata/sample.toon
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest

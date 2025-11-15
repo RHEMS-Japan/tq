@@ -33,3 +33,6 @@ bin/
 # Temporary files
 *.tmp
 *.log
+
+# Implementation log (do not commit)
+IMPLEMENTATION_LOG.md
