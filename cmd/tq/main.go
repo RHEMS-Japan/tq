@@ -294,29 +294,42 @@ func jsonToTOON(jsonInput string) (string, error) {
 
 func findScript(scriptName string) string {
 	// Try multiple locations in order
-	locations := []string{
-		// 1. Relative to current directory (development)
-		filepath.Join("scripts", scriptName),
-		// 2. Relative to executable (../scripts)
-		"",
-		// 3. In $HOME/.tq/scripts (installed location)
-		filepath.Join(os.Getenv("HOME"), ".tq", "scripts", scriptName),
-		// 4. In /usr/local/share/tq/scripts
-		filepath.Join("/usr/local/share/tq/scripts", scriptName),
+	var locations []string
+
+	// 1. Relative to current directory (development & CI)
+	locations = append(locations, filepath.Join("scripts", scriptName))
+
+	// 2. Relative to working directory (absolute)
+	if wd, err := os.Getwd(); err == nil {
+		locations = append(locations, filepath.Join(wd, "scripts", scriptName))
+		// Also try parent directories (for tests run from cmd/tq)
+		locations = append(locations, filepath.Join(wd, "..", "..", "scripts", scriptName))
 	}
 
-	// Add executable-relative path
+	// 3. Relative to executable
 	if execPath, err := os.Executable(); err == nil {
 		execDir := filepath.Dir(execPath)
-		locations[1] = filepath.Join(execDir, "..", "scripts", scriptName)
+		locations = append(locations, filepath.Join(execDir, "..", "scripts", scriptName))
+		locations = append(locations, filepath.Join(execDir, "scripts", scriptName))
 	}
 
+	// 4. In $HOME/.tq/scripts (installed location)
+	if home := os.Getenv("HOME"); home != "" {
+		locations = append(locations, filepath.Join(home, ".tq", "scripts", scriptName))
+	}
+
+	// 5. In /usr/local/share/tq/scripts
+	locations = append(locations, filepath.Join("/usr/local/share/tq/scripts", scriptName))
+
+	// Try each location
 	for _, location := range locations {
 		if location == "" {
 			continue
 		}
-		if _, err := os.Stat(location); err == nil {
-			return location
+		// Clean the path to resolve .. etc
+		cleanPath := filepath.Clean(location)
+		if _, err := os.Stat(cleanPath); err == nil {
+			return cleanPath
 		}
 	}
 
