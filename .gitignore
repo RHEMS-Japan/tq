@@ -34,5 +34,6 @@ bin/
 *.tmp
 *.log
 
-# Implementation log (do not commit)
+# Implementation logs and planning docs (do not commit)
 IMPLEMENTATION_LOG.md
+ROADMAP.md

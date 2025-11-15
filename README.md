@@ -229,17 +229,92 @@ This approach leverages:
 
 ## Supported jq Features
 
-Since `tq` uses `jq` internally, it supports most jq features:
+Since `tq` uses `jq` internally, it supports most jq features including:
 
-- **Basic filters**: `.`, `.key`, `.[index]`, `.[]`
-- **Operators**: `|`, `,`, `+`, `-`, `*`, `/`, `%`
-- **Conditionals**: `if-then-else`, `select()`
-- **Functions**: `map()`, `select()`, `sort_by()`, `group_by()`, `unique()`, etc.
-- **String interpolation**: `\(expr)`
-- **Array slicing**: `.[start:end]`
-- **Object construction**: `{key: value}`
+### Basic Filters
+- `.` - Identity
+- `.key` - Field access
+- `.[index]` - Array indexing
+- `.[]` - Array/object iteration
+- `.[start:end]` - Array slicing
+
+### Operators
+- **Arithmetic**: `+`, `-`, `*`, `/`, `%`
+- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
+- **Logical**: `and`, `or`, `not`
+- **Pipe**: `|`
+
+### Built-in Functions
+
+#### Array Functions
+- `length` - Get array/object/string length
+- `reverse` - Reverse array
+- `sort` - Sort array (ascending)
+- `sort_by(expr)` - Sort by expression
+- `unique` - Remove duplicates
+- `group_by(expr)` - Group by expression
+- `add` - Sum numbers or concatenate strings/arrays
+- `min`, `max` - Minimum/maximum value
+- `first`, `last` - First/last element
+- `flatten` - Flatten nested arrays
+- `map(expr)` - Transform each element
+
+#### Object Functions
+- `keys` - Get object keys (sorted)
+- `values` - Get object values
+- `has(key)` - Check if key exists
+- `in(object)` - Check if key is in object
+- `to_entries` - Convert object to key-value pairs
+- `from_entries` - Convert key-value pairs to object
+- `with_entries(expr)` - Transform entries
+
+#### Type Functions
+- `type` - Get type name
+- `tonumber` - Convert to number
+- `tostring` - Convert to string
+
+#### String Functions
+- `startswith(str)` - Check prefix
+- `endswith(str)` - Check suffix
+- `contains(str)` - Check substring
+- `split(sep)` - Split string
+- `join(sep)` - Join array to string
+
+### Conditionals & Logic
+- `if-then-else` - Conditional expressions
+- `select(expr)` - Filter by condition
+- `//` - Alternative operator
+
+### Construction
+- `{key: value}` - Create object
+- `[expr, expr]` - Create array
+- `\(expr)` - String interpolation
 
 For complete jq syntax, see the [jq manual](https://stedolan.github.io/jq/manual/).
+
+### Quick Reference
+
+```bash
+# Array operations
+tq '.items | length'                    # Count items
+tq '.items | sort_by(.price)'          # Sort by price
+tq '.items | map(.name)'               # Extract names
+tq '.items | unique'                   # Remove duplicates
+tq '.prices | add'                     # Sum prices
+
+# Object operations
+tq '. | keys'                          # List keys
+tq '. | has("field")'                  # Check field exists
+tq '. | to_entries'                    # Convert to array
+
+# Type checking
+tq '.value | type'                     # Get type
+tq '.age | tonumber'                   # Convert to number
+
+# String operations
+tq '.email | split("@")'               # Split email
+tq '.tags | join(", ")'                # Join with comma
+```
 
 ## Development
 
