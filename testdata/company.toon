@@ -1,0 +1,14 @@
+company: Acme Corp
+founded: 2020
+employees[5]{id,name,role,salary,active}:
+  1,Alice Smith,Engineer,95000,true
+  2,Bob Johnson,Designer,85000,true
+  3,Charlie Brown,Manager,110000,true
+  4,Diana Prince,Engineer,98000,false
+  5,Eve Wilson,Designer,87000,true
+departments[3]: Engineering,Design,Management
+address:
+  street: 123 Main St
+  city: San Francisco
+  state: CA
+  zip: 94105

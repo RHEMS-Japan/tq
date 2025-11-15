@@ -1,0 +1,5 @@
+products[4]{id,name,price,inStock,tags}:
+  101,Laptop,1299.99,true,"[""electronics"",""computers""]"
+  102,Mouse,29.99,true,"[""electronics"",""accessories""]"
+  103,Keyboard,79.99,false,"[""electronics"",""accessories""]"
+  104,Monitor,399.99,true,"[""electronics"",""displays""]"
