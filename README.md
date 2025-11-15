@@ -18,11 +18,11 @@ TOON is a compact, human-readable format for serializing JSON data, optimized fo
 
 ### Prerequisites
 
-- **Node.js** 14 or later ([download](https://nodejs.org/))
-- **jq** ([installation guide](https://stedolan.github.io/jq/download/))
+- **Node.js** 18 or later ([download](https://nodejs.org/))
+- **jq** 1.6 or later ([installation guide](https://stedolan.github.io/jq/download/))
   - macOS: `brew install jq`
   - Ubuntu/Debian: `sudo apt-get install jq`
-- **Go** 1.20 or later (for building from source) ([download](https://golang.org/dl/))
+- **Go** 1.21 or later (for building from source) ([download](https://golang.org/dl/))
 
 ### Quick Install (Recommended)
 

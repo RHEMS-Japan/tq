@@ -34,28 +34,23 @@ jobs:
   build:
     name: Build binaries
     needs: release
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            goos: linux
+          - goos: linux
             goarch: amd64
             suffix: ''
-          - os: ubuntu-latest
-            goos: linux
+          - goos: linux
             goarch: arm64
             suffix: ''
-          - os: macos-latest
-            goos: darwin
+          - goos: darwin
             goarch: amd64
             suffix: ''
-          - os: macos-latest
-            goos: darwin
+          - goos: darwin
             goarch: arm64
             suffix: ''
-          - os: ubuntu-latest
-            goos: windows
+          - goos: windows
             goarch: amd64
             suffix: '.exe'
 
@@ -66,7 +61,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: '1.21'
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
