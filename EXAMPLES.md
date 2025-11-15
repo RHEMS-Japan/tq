@@ -280,7 +280,224 @@ $ tq '[.employees[] | .role] | group_by(.) | map({role: .[0], count: length})' t
 [{"role":"Designer","count":2},{"role":"Engineer","count":2},{"role":"Manager","count":1}]
 ```
 
-## 5. Built-in Functions
+## 5. Operators
+
+`tq` supports all jq operators for arithmetic, comparison, logical operations, and more.
+
+### Arithmetic Operators
+
+#### Addition, subtraction, multiplication, division
+
+```bash
+# Basic arithmetic
+$ tq '.age + 5' testdata/sample.toon
+35
+
+$ tq '.age - 5' testdata/sample.toon
+25
+
+$ tq '.age * 2' testdata/sample.toon
+60
+
+$ tq '.age / 2' testdata/sample.toon
+15
+
+# Modulo (remainder)
+$ tq '.age % 7' testdata/sample.toon
+2
+```
+
+#### String concatenation
+
+```bash
+# Concatenate strings
+$ tq '.name + " (" + .email + ")"' testdata/sample.toon
+John Doe (john@example.com)
+
+# Build formatted strings
+$ tq '.employees[0] | .name + " - " + .role' testdata/company.toon
+Alice Smith - Engineer
+```
+
+#### Array concatenation
+
+```bash
+# Combine arrays
+$ echo '{"a":[1,2],"b":[3,4]}' | tq '.a + .b' --json
+[1,2,3,4]
+
+# Add element to array
+$ echo '[1,2,3]' | tq '. + [4,5]' --json
+[1,2,3,4,5]
+```
+
+#### Object merge
+
+```bash
+# Merge two objects
+$ echo '{"a":1,"b":2}' | tq '. + {c:3}' --json
+{"a":1,"b":2,"c":3}
+
+# Override values
+$ echo '{"a":1,"b":2}' | tq '. + {b:10}' --json
+{"a":1,"b":10}
+```
+
+### Comparison Operators
+
+#### Numeric comparison
+
+```bash
+# Greater than
+$ tq '.employees[] | select(.salary > 90000) | .name' testdata/company.toon
+Alice Smith
+Charlie Brown
+Diana Prince
+
+# Less than or equal
+$ tq '.employees[] | select(.salary <= 87000) | .name' testdata/company.toon
+Bob Johnson
+Eve Wilson
+
+# Range check
+$ tq '.users[] | select(.age >= 25 and .age <= 30)' testdata/users.toon
+name: Alice
+age: 25
+email: alice@example.com
+---
+name: Bob
+age: 30
+email: bob@example.com
+```
+
+#### Equality comparison
+
+```bash
+# String equality
+$ tq '.employees[] | select(.role == "Engineer") | .name' testdata/company.toon
+Alice Smith
+Diana Prince
+
+# Boolean check
+$ tq '.employees[] | select(.active == true) | .name' testdata/company.toon
+Alice Smith
+Bob Johnson
+Charlie Brown
+Eve Wilson
+
+# Not equal
+$ tq '.employees[] | select(.role != "Manager") | .name' testdata/company.toon
+Alice Smith
+Bob Johnson
+Diana Prince
+Eve Wilson
+```
+
+### Logical Operators
+
+#### AND operator
+
+```bash
+# Multiple conditions
+$ tq '.employees[] | select(.salary > 90000 and .active == true) | .name' testdata/company.toon
+Alice Smith
+Charlie Brown
+
+# Complex filters
+$ tq '.employees[] | select(.role == "Engineer" and .salary > 90000 and .active) | .name' testdata/company.toon
+Alice Smith
+```
+
+#### OR operator
+
+```bash
+# Any of multiple conditions
+$ tq '.employees[] | select(.role == "Manager" or .salary > 95000) | .name' testdata/company.toon
+Charlie Brown
+Diana Prince
+
+# Multiple role check
+$ tq '.employees[] | select(.role == "Engineer" or .role == "Designer") | .name' testdata/company.toon
+Alice Smith
+Bob Johnson
+Diana Prince
+Eve Wilson
+```
+
+#### NOT operator
+
+```bash
+# Negate boolean
+$ tq '.employees[] | select(.active | not) | .name' testdata/company.toon
+Diana Prince
+
+# Combine with other conditions
+$ tq '.employees[] | select(.role == "Engineer" and (.active | not)) | .name' testdata/company.toon
+Diana Prince
+```
+
+### Alternative Operator (//)
+
+The alternative operator `//` returns the right side if the left side is `null` or `false`.
+
+```bash
+# Provide default value
+$ echo '{"a":null,"b":"value"}' | tq '.a // "default"' --json
+"default"
+
+$ echo '{"a":"value","b":"fallback"}' | tq '.a // "default"' --json
+"value"
+
+# Chain alternatives
+$ echo '{"a":null,"b":null,"c":"final"}' | tq '.a // .b // .c // "none"' --json
+"final"
+
+# Use with missing fields
+$ echo '{"name":"John"}' | tq '.age // 0' --json
+0
+```
+
+### Combining Operators
+
+Build complex queries by combining multiple operators:
+
+```bash
+# Calculate adjusted salaries
+$ tq '.employees[] | {name, oldSalary: .salary, newSalary: (.salary * 1.1)}' testdata/company.toon
+name: Alice Smith
+oldSalary: 95000
+newSalary: 104500
+---
+name: Bob Johnson
+oldSalary: 85000
+newSalary: 93500
+---
+name: Charlie Brown
+oldSalary: 110000
+newSalary: 121000
+---
+name: Diana Prince
+oldSalary: 98000
+newSalary: 107800
+---
+name: Eve Wilson
+oldSalary: 87000
+newSalary: 95700
+
+# Filter and calculate
+$ tq '.employees[] | select(.salary > 90000 and .active) | {name, bonus: (.salary * 0.1)}' testdata/company.toon
+name: Alice Smith
+bonus: 9500
+---
+name: Charlie Brown
+bonus: 11000
+
+# Average salary calculation
+$ tq '([.employees[].salary] | add) / ([.employees[]] | length)' testdata/company.toon
+95000
+```
+
+## 6. Built-in Functions
 
 `tq` supports a wide range of jq built-in functions for working with arrays, objects, strings, and types.
 
@@ -520,7 +737,7 @@ $ tq '([.employees[].salary] | add) / (.employees | length)' testdata/company.to
 95000
 ```
 
-## Advanced Examples
+## 7. Advanced Examples
 
 ### Pipe multiple operations
 

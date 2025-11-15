@@ -239,10 +239,70 @@ Since `tq` uses `jq` internally, it supports most jq features including:
 - `.[start:end]` - Array slicing
 
 ### Operators
-- **Arithmetic**: `+`, `-`, `*`, `/`, `%`
-- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Logical**: `and`, `or`, `not`
-- **Pipe**: `|`
+
+#### Arithmetic Operators
+- `+` - Addition (numbers), concatenation (strings/arrays), merge (objects)
+- `-` - Subtraction (numbers), array difference
+- `*` - Multiplication (numbers), string repetition
+- `/` - Division
+- `%` - Modulo (remainder)
+
+```bash
+# Number operations
+tq '.price + 10' data.toon          # Add 10 to price
+tq '.price * 1.1' data.toon         # 10% increase
+
+# String concatenation
+tq '.first + " " + .last' data.toon # "John Doe"
+
+# Array concatenation
+tq '[1,2] + [3,4]'                  # [1,2,3,4]
+
+# Object merge
+tq '{a:1} + {b:2}'                  # {a:1, b:2}
+```
+
+#### Comparison Operators
+- `==` - Equal
+- `!=` - Not equal
+- `<` - Less than
+- `<=` - Less than or equal
+- `>` - Greater than
+- `>=` - Greater than or equal
+
+```bash
+# Numeric comparison
+tq '.age > 25' data.toon            # true/false
+tq '.price >= 100' data.toon
+
+# String comparison
+tq '.status == "active"' data.toon
+
+# Use with select()
+tq '.users[] | select(.age > 25)' data.toon
+```
+
+#### Logical Operators
+- `and` - Logical AND
+- `or` - Logical OR
+- `not` - Logical NOT
+
+```bash
+# Combine conditions
+tq '.users[] | select(.age > 25 and .active)' data.toon
+tq '.users[] | select(.role == "admin" or .role == "owner")' data.toon
+tq '.active | not' data.toon        # Negate boolean
+```
+
+#### Special Operators
+- `|` - Pipe (chain operations)
+- `//` - Alternative operator (returns right side if left is null/false)
+
+```bash
+# Alternative operator for defaults
+tq '.optional // "default"' data.toon
+tq '.a // .b // "none"' data.toon   # Chain alternatives
+```
 
 ### Built-in Functions
 
@@ -295,6 +355,12 @@ For complete jq syntax, see the [jq manual](https://stedolan.github.io/jq/manual
 ### Quick Reference
 
 ```bash
+# Operators
+tq '.price * 1.1'                      # Arithmetic (10% increase)
+tq '.first + " " + .last'              # String concatenation
+tq '.users[] | select(.age > 25)'      # Comparison in filter
+tq '.a // .b // "default"'             # Alternative operator
+
 # Array operations
 tq '.items | length'                    # Count items
 tq '.items | sort_by(.price)'          # Sort by price
