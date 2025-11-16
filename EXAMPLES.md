@@ -1778,7 +1778,187 @@ $ echo '["apple","banana","cherry"]' | tq '. as $items | $items | to_entries | m
 }
 ```
 
-## 10. Advanced Examples
+## 10. Recursive Descent
+
+The recursive descent operator `..` allows you to search through all levels of nested structures.
+
+### Basic Recursive Descent
+
+```bash
+# Get all values recursively
+$ echo '{"a":1,"b":{"c":2,"d":{"e":3}}}' | tq '..' --json
+{
+  "a": 1,
+  "b": {
+    "c": 2,
+    "d": {
+      "e": 3
+    }
+  }
+}
+1
+{
+  "c": 2,
+  "d": {
+    "e": 3
+  }
+}
+2
+{
+  "e": 3
+}
+3
+
+# Find all numbers in nested structure
+$ echo '{"a":1,"b":{"c":2,"d":"text","e":{"f":3}}}' | tq '.. | select(type == "number")' --json
+1
+2
+3
+```
+
+### Find Specific Field Values
+
+```bash
+# Find all 'name' fields recursively
+$ echo '{"name":"John","user":{"name":"Alice","profile":{"name":"Bob"}}}' | tq '.. | .name? // empty'
+"John"
+"Alice"
+"Bob"
+
+# Find specific field value anywhere in structure
+$ tq '.. | select(.name? == "Alice Smith")' testdata/company.toon
+id: 1
+name: Alice Smith
+role: Engineer
+salary: 95000
+active: true
+```
+
+### Type-Based Searches
+
+```bash
+# Find all strings
+$ echo '{"a":"hello","b":{"c":"world","d":123}}' | tq '.. | select(type == "string")' --json
+"hello"
+"world"
+
+# Find all objects
+$ echo '{"a":{"b":1},"c":{"d":2}}' | tq '.. | select(type == "object")' --json
+{
+  "a": {
+    "b": 1
+  },
+  "c": {
+    "d": 2
+  }
+}
+{
+  "b": 1
+}
+{
+  "d": 2
+}
+
+# Find all arrays
+$ echo '{"a":[1,2],"b":{"c":[3,4]}}' | tq '.. | select(type == "array")' --json
+[
+  1,
+  2
+]
+[
+  3,
+  4
+]
+```
+
+### Conditional Recursive Searches
+
+```bash
+# Find all numbers greater than a threshold
+$ echo '{"a":5,"b":{"c":15,"d":{"e":25}},"f":8}' | tq '.. | select(type == "number" and . > 10)' --json
+15
+25
+
+# Find strings starting with prefix
+$ echo '{"a":"test1","b":{"c":"other","d":"test2","e":{"f":"test3"}}}' | tq '.. | select(type == "string" and startswith("test"))' --json
+"test1"
+"test2"
+"test3"
+
+# Find objects that have a specific field
+$ echo '{"users":[{"id":1,"name":"Alice"},{"name":"Bob"},{"id":2,"name":"Charlie"}]}' | tq '.. | select(type == "object" and has("id"))' --json
+{
+  "id": 1,
+  "name": "Alice"
+}
+{
+  "id": 2,
+  "name": "Charlie"
+}
+```
+
+### Practical Examples
+
+#### Find all email addresses in nested structure
+
+```bash
+$ echo '{"user":{"email":"user@example.com","profile":{"contact":{"email":"alt@example.com"}}},"admin":{"email":"admin@example.com"}}' | tq '.. | .email? // empty'
+"user@example.com"
+"alt@example.com"
+"admin@example.com"
+```
+
+#### Extract all numeric values for analysis
+
+```bash
+$ tq '.. | select(type == "number")' testdata/company.toon | head -10
+2020
+---
+1
+---
+95000
+---
+2
+---
+85000
+---
+```
+
+#### Find all active users at any level
+
+```bash
+$ echo '{"dept1":{"users":[{"name":"A","active":true},{"name":"B","active":false}]},"dept2":{"teams":{"alpha":{"users":[{"name":"C","active":true}]}}}}' | tq '.. | select(.active? == true)' --json
+{
+  "active": true,
+  "name": "A"
+}
+{
+  "active": true,
+  "name": "C"
+}
+```
+
+#### Collect all unique field names
+
+```bash
+$ echo '{"a":1,"b":{"c":2,"d":{"e":3}}}' | tq '[.. | objects | keys] | flatten | unique' --json
+[
+  "a",
+  "b",
+  "c",
+  "d",
+  "e"
+]
+```
+
+#### Find maximum value anywhere in structure
+
+```bash
+$ echo '{"metrics":{"cpu":{"max":95,"avg":70},"memory":{"max":88,"avg":65}}}' | tq '[.. | select(type == "number")] | max' --json
+95
+```
+
+## 11. Advanced Examples
 
 ### Pipe multiple operations
 

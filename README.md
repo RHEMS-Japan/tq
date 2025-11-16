@@ -451,6 +451,36 @@ tq '.salary as $s | ($s * 0.1) as $bonus | {salary: $s, bonus: $bonus, total: ($
 - Preserve context in iterations: `.name as $n | .items[] | {parent: $n, item: .}`
 - Simplify complex expressions: `(.a + .b) as $sum | .c as $other | {sum: $sum, ratio: ($sum / $other)}`
 
+### Recursive Descent
+
+Search through all levels of nested structures using the `..` operator:
+
+```bash
+# Get all values recursively
+tq '..' data.toon
+
+# Find all numbers in nested structure
+tq '.. | select(type == "number")' data.toon
+
+# Find all occurrences of a specific field
+tq '.. | .email? // empty' data.toon
+
+# Find objects with specific field value
+tq '.. | select(.name? == "Alice")' data.toon
+
+# Find all strings starting with prefix
+tq '.. | select(type == "string" and startswith("test"))' data.toon
+
+# Combine with other filters
+tq '.. | select(type == "number" and . > 100)' data.toon
+```
+
+**Use cases:**
+- Search deeply nested JSON/TOON structures
+- Find all values of a specific type
+- Locate specific field values anywhere in the structure
+- Extract all instances of a particular pattern
+
 ### Construction
 
 #### Object Construction
@@ -557,6 +587,10 @@ tq 'try .field catch "default"'        # Catch errors
 # Variables
 tq '.age as $a | {name, age: $a, next: ($a + 1)}'  # Bind and reuse
 tq '.price as $p | .qty as $q | {total: ($p * $q)}'  # Multiple variables
+
+# Recursive descent
+tq '.. | select(type == "number")'     # Find all numbers
+tq '.. | .email? // empty'             # Find all email fields
 
 # Construction
 tq '{name, age}'                       # Select fields
