@@ -334,11 +334,42 @@ tq '.a // .b // "none"' data.toon   # Chain alternatives
 - `tostring` - Convert to string
 
 #### String Functions
+
+**Basic String Operations**
 - `startswith(str)` - Check prefix
 - `endswith(str)` - Check suffix
 - `contains(str)` - Check substring
-- `split(sep)` - Split string
-- `join(sep)` - Join array to string
+- `split(sep)` - Split string into array
+- `join(sep)` - Join array elements into string
+
+**Case Conversion**
+- `ascii_upcase` - Convert to uppercase
+- `ascii_downcase` - Convert to lowercase
+
+**Trimming**
+- `ltrimstr(str)` - Remove prefix string
+- `rtrimstr(str)` - Remove suffix string
+
+**Regular Expressions**
+- `test(regex)` - Test if string matches regex (returns boolean)
+- `match(regex)` - Match string against regex (returns match object)
+- `sub(regex; replacement)` - Replace first match
+- `gsub(regex; replacement)` - Replace all matches
+
+**Format Functions**
+- `@base64` - Base64 encode
+- `@uri` - URL encode
+- `@csv` - CSV format
+- `@json` - JSON encode
+- `@html` - HTML encode
+- `@base64d` - Base64 decode
+
+**String Interpolation**
+```bash
+# Embed expressions in strings
+tq '"\(.name) is \(.age) years old"' data.toon
+# Result: "John is 30 years old"
+```
 
 ### Conditionals & Logic
 - `if-then-else` - Conditional expressions
@@ -435,6 +466,10 @@ tq '.age | tonumber'                   # Convert to number
 # String operations
 tq '.email | split("@")'               # Split email
 tq '.tags | join(", ")'                # Join with comma
+tq '.name | ascii_upcase'              # Convert to uppercase
+tq '.url | ltrimstr("https://")'       # Remove prefix
+tq '.text | gsub("foo"; "bar")'        # Replace all occurrences
+tq '"\(.name) <\(.email)>"'            # String interpolation
 
 # Construction
 tq '{name, age}'                       # Select fields

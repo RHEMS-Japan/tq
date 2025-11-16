@@ -810,6 +810,32 @@ $ tq '.employees | map({name, salary: (.salary | tostring)})' testdata/company.t
 
 ### String Functions
 
+#### String interpolation
+
+Build strings with embedded expressions:
+
+```bash
+# Basic interpolation
+$ tq '.employees[0] | "\(.name) works as a \(.role)"' testdata/company.toon
+Alice Smith works as a Engineer
+
+# Multiple fields
+$ tq '.employees[0] | "\(.name) - \(.role) - $\(.salary)"' testdata/company.toon
+Alice Smith - Engineer - $95000
+
+# With computation
+$ tq '.employees[0] | "Annual bonus: $\(.salary * 0.1)"' testdata/company.toon
+Annual bonus: $9500
+
+# Formatted output
+$ tq '.employees[] | "\(.name) (\(.role)): \(if .active then "Active" else "Inactive" end)"' testdata/company.toon
+Alice Smith (Engineer): Active
+Bob Johnson (Designer): Active
+Charlie Brown (Manager): Active
+Diana Prince (Engineer): Inactive
+Eve Wilson (Designer): Active
+```
+
 #### String matching
 
 ```bash
@@ -824,6 +850,10 @@ true
 # Check if string contains substring
 $ tq '.name | contains("Doe")' testdata/sample.toon
 true
+
+# Multiple checks
+$ tq '.employees[] | select(.name | startswith("Alice")) | .role' testdata/company.toon
+Engineer
 ```
 
 #### Split and join
@@ -833,9 +863,197 @@ true
 $ tq '.email | split("@")' testdata/sample.toon --json
 ["john","example.com"]
 
+# Split by space
+$ tq '.name | split(" ")' testdata/sample.toon --json
+["John","Doe"]
+
 # Join array elements
 $ tq '[.employees[].name] | join(", ")' testdata/company.toon
 "Alice Smith, Bob Johnson, Charlie Brown, Diana Prince, Eve Wilson"
+
+# Join with newline
+$ tq '[.users[].name] | join("\n")' testdata/users.toon
+"Alice\nBob\nCharlie"
+```
+
+#### Case conversion
+
+```bash
+# Convert to uppercase
+$ tq '.name | ascii_upcase' testdata/sample.toon
+JOHN DOE
+
+$ tq '.employees[].name | ascii_upcase' testdata/company.toon
+ALICE SMITH
+---
+BOB JOHNSON
+---
+CHARLIE BROWN
+---
+DIANA PRINCE
+---
+EVE WILSON
+
+# Convert to lowercase
+$ tq '.name | ascii_downcase' testdata/sample.toon
+john doe
+
+# Use in transformation
+$ tq '.employees[] | {name, upperName: (.name | ascii_upcase)}' testdata/company.toon
+name: Alice Smith
+upperName: ALICE SMITH
+---
+name: Bob Johnson
+upperName: BOB JOHNSON
+---
+name: Charlie Brown
+upperName: CHARLIE BROWN
+---
+name: Diana Prince
+upperName: DIANA PRINCE
+---
+name: Eve Wilson
+upperName: EVE WILSON
+```
+
+#### Trimming strings
+
+```bash
+# Remove prefix
+$ tq '.email | ltrimstr("john@")' testdata/sample.toon
+example.com
+
+# Remove suffix
+$ tq '.email | rtrimstr("example.com")' testdata/sample.toon
+john@
+
+# Chain trimming
+$ tq '.email | ltrimstr("john@") | rtrimstr(".com")' testdata/sample.toon
+example
+```
+
+#### Regular expressions
+
+```bash
+# Test if pattern matches
+$ tq '.email | test("@example.com$")' testdata/sample.toon
+true
+
+# Test with pattern
+$ tq '.employees[].name | test("^A")' testdata/company.toon
+true
+---
+false
+---
+false
+---
+false
+---
+false
+
+# Filter using regex
+$ tq '.employees[] | select(.name | test("^[AB]")) | .name' testdata/company.toon
+Alice Smith
+Bob Johnson
+
+# Extract with match
+$ tq '.email | match("(.+)@(.+)") | .captures[0].string' testdata/sample.toon
+john
+```
+
+#### String replacement
+
+```bash
+# Replace first occurrence
+$ tq '.employees[0].role | sub("Engineer"; "Senior Engineer")' testdata/company.toon
+Senior Engineer
+
+# Replace all occurrences
+$ tq '.name | gsub(" "; "_")' testdata/sample.toon
+John_Doe
+
+# Remove characters
+$ tq '.name | gsub("[aeiou]"; "")' testdata/sample.toon
+Jhn D
+
+# Format names
+$ tq '.employees[] | {name, slug: (.name | ascii_downcase | gsub(" "; "-"))}' testdata/company.toon
+name: Alice Smith
+slug: alice-smith
+---
+name: Bob Johnson
+slug: bob-johnson
+---
+name: Charlie Brown
+slug: charlie-brown
+---
+name: Diana Prince
+slug: diana-prince
+---
+name: Eve Wilson
+slug: eve-wilson
+```
+
+#### Format functions
+
+```bash
+# URL encode
+$ tq '.name | @uri' testdata/sample.toon
+John%20Doe
+
+# Base64 encode
+$ tq '.name | @base64' testdata/sample.toon
+Sm9obiBEb2U=
+
+# JSON encode (escape for JSON)
+$ tq '.name | @json' testdata/sample.toon
+"John Doe"
+
+# Use in templates
+$ tq '.employees[0] | "https://example.com/profile/\(.name | @uri)"' testdata/company.toon
+https://example.com/profile/Alice%20Smith
+```
+
+#### Combining string functions
+
+```bash
+# Complex transformation
+$ tq '.employees[] | {name, email: ((.name | ascii_downcase | gsub(" "; ".")) + "@company.com")}' testdata/company.toon
+name: Alice Smith
+email: alice.smith@company.com
+---
+name: Bob Johnson
+email: bob.johnson@company.com
+---
+name: Charlie Brown
+email: charlie.brown@company.com
+---
+name: Diana Prince
+email: diana.prince@company.com
+---
+name: Eve Wilson
+email: eve.wilson@company.com
+
+# Parse and format
+$ tq '.email | split("@") | "\(.[0]) at \(.[1])"' testdata/sample.toon
+john at example.com
+
+# Generate slugs
+$ tq '.employees[] | {name, slug: (.name | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | rtrimstr("-"))}' testdata/company.toon
+name: Alice Smith
+slug: alice-smith
+---
+name: Bob Johnson
+slug: bob-johnson
+---
+name: Charlie Brown
+slug: charlie-brown
+---
+name: Diana Prince
+slug: diana-prince
+---
+name: Eve Wilson
+slug: eve-wilson
 ```
 
 ### Combining Functions
