@@ -346,9 +346,64 @@ tq '.a // .b // "none"' data.toon   # Chain alternatives
 - `//` - Alternative operator
 
 ### Construction
-- `{key: value}` - Create object
-- `[expr, expr]` - Create array
-- `\(expr)` - String interpolation
+
+#### Object Construction
+Create new objects by selecting or transforming fields:
+
+```bash
+# Field shorthand - select specific fields
+tq '{name, age}' data.toon
+# Result: {"name": "John", "age": 30}
+
+# Rename fields
+tq '{n: .name, a: .age}' data.toon
+# Result: {"n": "John", "a": 30}
+
+# Computed fields
+tq '{name, doubled: (.age * 2)}' data.toon
+# Result: {"name": "John", "doubled": 60}
+
+# Nested objects
+tq '{user: {name, age}, email}' data.toon
+# Result: {"user": {"name": "John", "age": 30}, "email": "..."}
+
+# With map() - transform arrays
+tq '.users | map({name, email})' data.toon
+# Extract only name and email from each user
+```
+
+#### Array Construction
+Create new arrays from expressions:
+
+```bash
+# Simple array
+tq '[.a, .b, .c]' data.toon
+# Result: [1, 2, 3]
+
+# With computation
+tq '[.x, (.x * 2), (.x * 3)]' data.toon
+# Result: [5, 10, 15]
+
+# From iteration
+tq '[.users[].name]' data.toon
+# Result: ["Alice", "Bob", "Charlie"]
+
+# With filtering
+tq '[.users[] | select(.age > 25)]' data.toon
+# Result: array of users over 25
+
+# Range function
+tq '[range(5)]'
+# Result: [0, 1, 2, 3, 4]
+```
+
+#### String Interpolation
+Build strings with embedded expressions:
+
+```bash
+tq '"\(.name) is \(.age) years old"' data.toon
+# Result: "John is 30 years old"
+```
 
 For complete jq syntax, see the [jq manual](https://stedolan.github.io/jq/manual/).
 
@@ -380,6 +435,12 @@ tq '.age | tonumber'                   # Convert to number
 # String operations
 tq '.email | split("@")'               # Split email
 tq '.tags | join(", ")'                # Join with comma
+
+# Construction
+tq '{name, age}'                       # Select fields
+tq '.users | map({name, email})'       # Transform array
+tq '[.users[].name]'                   # Build array from field
+tq '[range(10)]'                       # Generate range
 ```
 
 ## Development

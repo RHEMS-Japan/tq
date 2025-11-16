@@ -280,6 +280,133 @@ $ tq '[.employees[] | .role] | group_by(.) | map({role: .[0], count: length})' t
 [{"role":"Designer","count":2},{"role":"Engineer","count":2},{"role":"Manager","count":1}]
 ```
 
+### Object Construction
+
+#### Basic field selection
+
+```bash
+# Select only specific fields
+$ tq '.employees[0] | {name, role}' testdata/company.toon
+name: Alice Smith
+role: Engineer
+
+# Select from multiple objects
+$ tq '.employees[] | {name, salary}' testdata/company.toon
+name: Alice Smith
+salary: 95000
+---
+name: Bob Johnson
+salary: 85000
+---
+name: Charlie Brown
+salary: 110000
+---
+name: Diana Prince
+salary: 98000
+---
+name: Eve Wilson
+salary: 87000
+```
+
+#### Renaming and computing fields
+
+```bash
+# Rename fields
+$ tq '.employees[0] | {employeeName: .name, position: .role}' testdata/company.toon
+employeeName: Alice Smith
+position: Engineer
+
+# Add computed fields
+$ tq '.employees[0] | {name, role, annualBonus: (.salary * 0.1)}' testdata/company.toon
+name: Alice Smith
+role: Engineer
+annualBonus: 9500
+```
+
+#### Nested object construction
+
+```bash
+# Create nested structure
+$ tq '.employees[0] | {profile: {name, role}, compensation: {salary, active}}' testdata/company.toon --json
+{"profile":{"name":"Alice Smith","role":"Engineer"},"compensation":{"salary":95000,"active":true}}
+
+# Mix nested and flat fields
+$ tq '.employees[0] | {id, person: {name, role}, status: .active}' testdata/company.toon --json
+{"id":1,"person":{"name":"Alice Smith","role":"Engineer"},"status":true}
+```
+
+### Array Construction
+
+#### Building arrays from fields
+
+```bash
+# Create array from multiple fields
+$ tq '.employees[0] | [.name, .role, .salary]' testdata/company.toon --json
+["Alice Smith","Engineer",95000]
+
+# Array of all names
+$ tq '[.employees[].name]' testdata/company.toon --json
+["Alice Smith","Bob Johnson","Charlie Brown","Diana Prince","Eve Wilson"]
+
+# Array of salaries
+$ tq '[.employees[].salary]' testdata/company.toon --json
+[95000,85000,110000,98000,87000]
+```
+
+#### Conditional array construction
+
+```bash
+# Build array with filter
+$ tq '[.employees[] | select(.salary > 90000) | .name]' testdata/company.toon --json
+["Alice Smith","Charlie Brown","Diana Prince"]
+
+# Complex filtered array
+$ tq '[.employees[] | select(.active and .salary > 85000) | {name, salary}]' testdata/company.toon --json
+[{"name":"Alice Smith","salary":95000},{"name":"Charlie Brown","salary":110000},{"name":"Eve Wilson","salary":87000}]
+```
+
+#### Using range()
+
+```bash
+# Generate range
+$ tq '[range(5)]' --json <<< 'null'
+[0,1,2,3,4]
+
+# Range with start and end
+$ tq '[range(3;7)]' --json <<< 'null'
+[3,4,5,6]
+
+# Use range for indexing
+$ tq '.employees | [range(3)] | map(.employees[.] | .name)' testdata/company.toon --json
+["Alice Smith","Bob Johnson","Charlie Brown"]
+```
+
+### Complex Transformation Patterns
+
+#### Restructure data completely
+
+```bash
+# Transform employee data to summary format
+$ tq '.employees | map({employee: .name, details: {position: .role, compensation: .salary, status: (if .active then "Active" else "Inactive" end)}})' testdata/company.toon --json
+[{"employee":"Alice Smith","details":{"position":"Engineer","compensation":95000,"status":"Active"}},{"employee":"Bob Johnson","details":{"position":"Designer","compensation":85000,"status":"Active"}},{"employee":"Charlie Brown","details":{"position":"Manager","compensation":110000,"status":"Active"}},{"employee":"Diana Prince","details":{"position":"Engineer","compensation":98000,"status":"Inactive"}},{"employee":"Eve Wilson","details":{"position":"Designer","compensation":87000,"status":"Active"}}]
+```
+
+#### Create lookup tables
+
+```bash
+# Create role-based lookup
+$ tq '.employees | group_by(.role) | map({role: .[0].role, members: [.[].name], avgSalary: (([.[].salary] | add) / length)})' testdata/company.toon --json
+[{"role":"Designer","members":["Bob Johnson","Eve Wilson"],"avgSalary":86000},{"role":"Engineer","members":["Alice Smith","Diana Prince"],"avgSalary":96500},{"role":"Manager","members":["Charlie Brown"],"avgSalary":110000}]
+```
+
+#### Combine multiple transformations
+
+```bash
+# Filter, transform, and aggregate
+$ tq '[.employees[] | select(.active)] | {activeCount: length, totalSalary: ([.[].salary] | add), avgSalary: (([.[].salary] | add) / length), employees: [.[].name]}' testdata/company.toon --json
+{"activeCount":4,"totalSalary":377000,"avgSalary":94250,"employees":["Alice Smith","Bob Johnson","Charlie Brown","Eve Wilson"]}
+```
+
 ## 5. Operators
 
 `tq` supports all jq operators for arithmetic, comparison, logical operations, and more.
