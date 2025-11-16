@@ -1337,7 +1337,213 @@ $ tq '[.employees[] | if .active then {name, role, status: "active", adjustedSal
 [{"name":"Alice Smith","role":"Engineer","status":"active","adjustedSalary":104500},{"name":"Bob Johnson","role":"Designer","status":"active","adjustedSalary":93500},{"name":"Charlie Brown","role":"Manager","status":"active","adjustedSalary":121000},{"name":"Diana Prince","role":"Engineer","status":"inactive","adjustedSalary":98000},{"name":"Eve Wilson","role":"Designer","status":"active","adjustedSalary":95700}]
 ```
 
-## 8. Advanced Examples
+## 8. Error Handling
+
+`tq` provides robust error handling with optional access, try-catch, and alternative operators.
+
+### Optional Access Operator (?)
+
+The `?` operator returns `null` instead of throwing an error when accessing missing fields or invalid indices.
+
+```bash
+# Missing field
+$ tq '.employees[0].department?' testdata/company.toon
+null
+
+# Array out of bounds
+$ tq '.employees[99]?' testdata/company.toon
+null
+
+# Nested optional access
+$ tq '.employees[0] | .metadata?.created?' testdata/company.toon
+null
+
+# Use with data that exists
+$ tq '.employees[0].name?' testdata/company.toon
+Alice Smith
+```
+
+### try-catch Expressions
+
+Catch errors and provide fallback values:
+
+```bash
+# Basic try-catch
+$ tq 'try .employees[0].invalid catch "field not found"' testdata/company.toon
+null
+
+# Division by zero
+$ tq 'try (.employees[0].salary / 0) catch "division error"' testdata/company.toon
+division error
+
+# Type conversion error
+$ tq 'try (.name | tonumber) catch 0' testdata/sample.toon
+0
+
+# Try-catch with computation
+$ tq '.employees[] | {name, bonus: (try (.salary * 0.1) catch 0)}' testdata/company.toon
+name: Alice Smith
+bonus: 9500
+---
+name: Bob Johnson
+bonus: 8500
+---
+name: Charlie Brown
+bonus: 11000
+---
+name: Diana Prince
+bonus: 9800
+---
+name: Eve Wilson
+bonus: 8700
+```
+
+### Alternative Operator (//) in Depth
+
+Provide default values for null or false fields:
+
+```bash
+# Simple default
+$ tq '.employees[] | {name, department: (.department // "Unassigned")}' testdata/company.toon
+name: Alice Smith
+department: Unassigned
+---
+name: Bob Johnson
+department: Unassigned
+---
+name: Charlie Brown
+department: Unassigned
+---
+name: Diana Prince
+department: Unassigned
+---
+name: Eve Wilson
+department: Unassigned
+
+# Chain multiple alternatives
+$ tq '.employees[0] | .manager // .supervisor // "No manager assigned"' testdata/company.toon
+No manager assigned
+
+# With computations
+$ tq '.employees[] | {name, status: (if .active then "Active" else "Inactive" end), team: (.team // "General")}' testdata/company.toon
+name: Alice Smith
+status: Active
+team: General
+---
+name: Bob Johnson
+status: Active
+team: General
+---
+name: Charlie Brown
+status: Active
+team: General
+---
+name: Diana Prince
+status: Inactive
+team: General
+---
+name: Eve Wilson
+status: Active
+team: General
+```
+
+### Combining Error Handling Techniques
+
+```bash
+# Optional access with alternative
+$ tq '.employees[] | {name, email: (.email? // "no-email@company.com")}' testdata/company.toon
+name: Alice Smith
+email: no-email@company.com
+---
+name: Bob Johnson
+email: no-email@company.com
+---
+name: Charlie Brown
+email: no-email@company.com
+---
+name: Diana Prince
+email: no-email@company.com
+---
+name: Eve Wilson
+email: no-email@company.com
+
+# Try-catch with alternative
+$ tq '.employees[] | {name, level: ((try .level catch null) // "Standard")}' testdata/company.toon
+name: Alice Smith
+level: Standard
+---
+name: Bob Johnson
+level: Standard
+---
+name: Charlie Brown
+level: Standard
+---
+name: Diana Prince
+level: Standard
+---
+name: Eve Wilson
+level: Standard
+
+# Nested optional access with alternatives
+$ tq '.employees[] | {name, contact: (.contact?.email? // .contact?.phone? // "No contact info")}' testdata/company.toon
+name: Alice Smith
+contact: No contact info
+---
+name: Bob Johnson
+contact: No contact info
+---
+name: Charlie Brown
+contact: No contact info
+---
+name: Diana Prince
+contact: No contact info
+---
+name: Eve Wilson
+contact: No contact info
+```
+
+### Practical Error Handling Examples
+
+#### Safe data extraction
+
+```bash
+# Extract fields safely with defaults
+$ tq '.employees | map({name, role, salary: (.salary // 0), active: (.active // false)})' testdata/company.toon
+[5]{name,role,salary,active}:
+  Alice Smith,Engineer,95000,true
+  Bob Johnson,Designer,85000,true
+  Charlie Brown,Manager,110000,true
+  Diana Prince,Engineer,98000,false
+  Eve Wilson,Designer,87000,true
+```
+
+#### Graceful degradation
+
+```bash
+# Build robust queries that don't fail on missing data
+$ tq '.employees[] | "\(.name) - \(.role // "Unknown Role") - \((.salary // 0) | if . > 0 then "Salary: $\(.)" else "Salary not disclosed" end)"' testdata/company.toon
+Alice Smith - Engineer - Salary: $95000
+---
+Bob Johnson - Designer - Salary: $85000
+---
+Charlie Brown - Manager - Salary: $110000
+---
+Diana Prince - Engineer - Salary: $98000
+---
+Eve Wilson - Designer - Salary: $87000
+```
+
+#### Safe aggregations
+
+```bash
+# Calculate with error handling
+$ tq '{total: ([.employees[]? | .salary? // 0] | add), count: ([.employees[]?] | length), average: (([.employees[]? | .salary? // 0] | add) / ([.employees[]?] | length))}' testdata/company.toon
+total: 475000
+count: 5
+average: 95000
+```
+
+## 9. Advanced Examples
 
 ### Pipe multiple operations
 

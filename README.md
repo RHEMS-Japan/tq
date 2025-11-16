@@ -53,7 +53,7 @@ source ~/.bashrc
 
 **Verify installation**:
 ```bash
-tq --version  # Should output: tq version 0.1.0
+tq --version  # Should output: tq version 0.2.0
 ```
 
 ### Manual Installation
@@ -396,9 +396,29 @@ tq '"\(.name): \(if .verified then "✓" else "✗" end)"' data.toon
 tq 'if .age > 18 and .verified then "allowed" else "denied" end' data.toon
 ```
 
+#### Error Handling
+Robust error handling for missing fields and invalid operations:
+
+```bash
+# Optional access operator (?) - returns null instead of error
+tq '.user.email?' data.toon                    # Returns null if missing
+tq '.[99]?' data.toon                          # Returns null if out of bounds
+
+# try-catch - catch errors and provide fallback
+tq 'try .invalid catch "default"' data.toon    # Returns "default" on error
+tq 'try (1/0) catch "error"' data.toon         # Catches division by zero
+
+# Alternative operator (//) - use default if null/false
+tq '.field // "default"' data.toon             # Use default if null/false
+tq '.a // .b // "none"' data.toon              # Chain alternatives
+
+# Combining error handling
+tq '.user?.email? // "no email"' data.toon     # Optional + alternative
+tq '{name, email: (.email // "N/A")}' data.toon  # In object construction
+```
+
 #### Other Conditional Tools
 - `select(expr)` - Filter by condition (keep only matching items)
-- `//` - Alternative operator (use default if null/false)
 - `empty` - Return nothing (useful with conditionals for filtering)
 
 ### Construction
@@ -499,6 +519,10 @@ tq '"\(.name) <\(.email)>"'            # String interpolation
 # Conditionals
 tq 'if .age > 18 then "adult" else "minor" end'  # Basic conditional
 tq '{name, tier: (if .premium then "Premium" else "Free" end)}'  # In objects
+
+# Error handling
+tq '.user.email? // "no email"'        # Optional access with default
+tq 'try .field catch "default"'        # Catch errors
 
 # Construction
 tq '{name, age}'                       # Select fields
