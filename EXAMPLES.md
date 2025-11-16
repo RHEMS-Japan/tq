@@ -1543,7 +1543,242 @@ count: 5
 average: 95000
 ```
 
-## 9. Advanced Examples
+## 9. Variables
+
+Variables allow you to bind values for reuse in complex queries using the `as $var` syntax.
+
+### Basic Variable Binding
+
+```bash
+# Store a value and reuse it
+$ tq '.age as $a | {name, age: $a, next_year: ($a + 1)}' testdata/sample.toon
+name: John Doe
+age: 30
+next_year: 31
+
+# Calculate percentage
+$ tq '.employees[0] | .salary as $s | {name, salary: $s, monthly: ($s / 12)}' testdata/company.toon
+name: Alice Smith
+salary: 95000
+monthly: 7916.666666666667
+```
+
+### Multiple Variables
+
+```bash
+# Use multiple variables in calculation
+$ echo '{"price":100,"quantity":5,"discount":0.1}' | tq '.price as $p | .quantity as $q | .discount as $d | {subtotal: ($p * $q), discount_amount: ($p * $q * $d), total: ($p * $q * (1 - $d))}' --json
+{
+  "discount_amount": 50,
+  "subtotal": 500,
+  "total": 450
+}
+
+# Chained variable assignments
+$ echo '{"salary":100000}' | tq '.salary as $s | ($s * 0.1) as $bonus | ($s * 0.05) as $tax | {salary: $s, bonus: $bonus, tax: $tax, net: ($s + $bonus - $tax)}' --json
+{
+  "bonus": 10000,
+  "net": 105000,
+  "salary": 100000,
+  "tax": 5000
+}
+```
+
+### Variables in Filtering
+
+```bash
+# Use variable in select
+$ tq '.employees[] | .salary as $s | select($s > 90000) | {name, salary: $s}' testdata/company.toon
+name: Alice Smith
+salary: 95000
+---
+name: Charlie Brown
+salary: 110000
+---
+name: Diana Prince
+salary: 98000
+
+# Filter with computed variable
+$ tq '.users[] | .age as $a | select($a >= 25 and $a <= 30) | {name, age: $a}' testdata/users.toon
+name: Alice
+age: 25
+---
+name: Bob
+age: 30
+```
+
+### Variables Across Nested Iterations
+
+```bash
+# Preserve parent context in nested iteration
+$ echo '{"users":[{"name":"Alice","scores":[85,90,95]},{"name":"Bob","scores":[70,75,80]}]}' | tq '.users[] | .name as $username | .scores[] | {user: $username, score: .}' --json
+{
+  "score": 85,
+  "user": "Alice"
+}
+{
+  "score": 90,
+  "user": "Alice"
+}
+{
+  "score": 95,
+  "user": "Alice"
+}
+{
+  "score": 70,
+  "user": "Bob"
+}
+{
+  "score": 75,
+  "user": "Bob"
+}
+{
+  "score": 80,
+  "user": "Bob"
+}
+
+# Complex nested example with categories
+$ echo '[{"category":"Electronics","items":[{"name":"Laptop","price":1200},{"name":"Mouse","price":25}]},{"category":"Books","items":[{"name":"Novel","price":15},{"name":"Textbook","price":80}]}]' | tq '.[] | .category as $cat | .items[] | {category: $cat, item: .name, price: .price}' --json
+{
+  "category": "Electronics",
+  "item": "Laptop",
+  "price": 1200
+}
+{
+  "category": "Electronics",
+  "item": "Mouse",
+  "price": 25
+}
+{
+  "category": "Books",
+  "item": "Novel",
+  "price": 15
+}
+{
+  "category": "Books",
+  "item": "Textbook",
+  "price": 80
+}
+```
+
+### Variables with Aggregations
+
+```bash
+# Calculate percentages relative to total
+$ echo '[5,10,15,20]' | tq '[.[]] | add as $total | . | map({value: ., percentage: ((. / $total) * 100)})' --json
+[
+  {
+    "percentage": 10,
+    "value": 5
+  },
+  {
+    "percentage": 20,
+    "value": 10
+  },
+  {
+    "percentage": 30,
+    "value": 15
+  },
+  {
+    "percentage": 40,
+    "value": 20
+  }
+]
+
+# Normalize values
+$ echo '[100,200,300]' | tq '[.[]] | max as $max | . | map(. / $max)' --json
+[
+  0.3333333333333333,
+  0.6666666666666666,
+  1
+]
+
+# Group statistics
+$ tq '.employees | length as $count | [.[].salary] | add as $total | {employee_count: $count, total_salary: $total, average_salary: ($total / $count)}' testdata/company.toon
+employee_count: 5
+total_salary: 475000
+average_salary: 95000
+```
+
+### Variables with Conditionals
+
+```bash
+# Use variable in conditional
+$ tq '.employees[] | .salary as $s | {name, salary: $s, level: (if $s >= 100000 then "senior" elif $s >= 90000 then "mid" else "junior" end)}' testdata/company.toon
+name: Alice Smith
+salary: 95000
+level: mid
+---
+name: Bob Johnson
+salary: 85000
+level: junior
+---
+name: Charlie Brown
+salary: 110000
+level: senior
+---
+name: Diana Prince
+salary: 98000
+level: mid
+---
+name: Eve Wilson
+salary: 87000
+level: junior
+
+# Conditional calculation with variable
+$ echo '{"price":100,"discount":0.2,"premium":true}' | tq '.price as $p | .discount as $d | .premium as $prem | if $prem then ($p * (1 - $d) * 0.9) else ($p * (1 - $d)) end' --json
+72
+```
+
+### Practical Examples
+
+#### Calculate employee bonuses based on performance tiers
+
+```bash
+$ tq '.employees[] | .salary as $s | .active as $act | select($act) | {name, salary: $s, bonus: (if $s >= 100000 then ($s * 0.15) elif $s >= 90000 then ($s * 0.12) else ($s * 0.10) end)}' testdata/company.toon
+name: Alice Smith
+salary: 95000
+bonus: 11400
+---
+name: Bob Johnson
+salary: 85000
+bonus: 8500
+---
+name: Charlie Brown
+salary: 110000
+bonus: 16500
+---
+name: Eve Wilson
+salary: 87000
+bonus: 8700
+```
+
+#### Generate report with computed metrics
+
+```bash
+$ echo '{"revenue":1000000,"costs":750000,"employees":50}' | tq '.revenue as $r | .costs as $c | .employees as $e | {revenue: $r, costs: $c, profit: ($r - $c), margin: ((($r - $c) / $r) * 100), revenue_per_employee: ($r / $e), profit_per_employee: (($r - $c) / $e)}' --json
+{
+  "costs": 750000,
+  "margin": 25,
+  "profit": 250000,
+  "profit_per_employee": 5000,
+  "revenue": 1000000,
+  "revenue_per_employee": 20000
+}
+```
+
+#### Create index mapping
+
+```bash
+$ echo '["apple","banana","cherry"]' | tq '. as $items | $items | to_entries | map({(.value): .key}) | add' --json
+{
+  "apple": 0,
+  "banana": 1,
+  "cherry": 2
+}
+```
+
+## 10. Advanced Examples
 
 ### Pipe multiple operations
 

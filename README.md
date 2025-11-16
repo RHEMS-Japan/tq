@@ -421,6 +421,36 @@ tq '{name, email: (.email // "N/A")}' data.toon  # In object construction
 - `select(expr)` - Filter by condition (keep only matching items)
 - `empty` - Return nothing (useful with conditionals for filtering)
 
+### Variables
+
+Bind values to variables for reuse in complex queries using the `as $var` syntax:
+
+```bash
+# Basic variable binding
+tq '.age as $a | {name, age: $a, next_year: ($a + 1)}' data.toon
+
+# Multiple variables
+tq '.price as $p | .quantity as $q | {total: ($p * $q)}' data.toon
+
+# Variables in select
+tq '.users[] | .age as $a | select($a > 25) | {name, age: $a}' data.toon
+
+# Variables across nested iterations
+tq '.users[] | .name as $n | .scores[] | {user: $n, score: .}' data.toon
+
+# Variables with aggregations
+tq '[.prices[]] | add as $total | . | map(. / $total)' data.toon
+# Calculate percentage of each price relative to total
+
+# Chained variable assignments
+tq '.salary as $s | ($s * 0.1) as $bonus | {salary: $s, bonus: $bonus, total: ($s + $bonus)}' data.toon
+```
+
+**Common patterns:**
+- Store intermediate results: `.field as $var | ... use $var multiple times ...`
+- Preserve context in iterations: `.name as $n | .items[] | {parent: $n, item: .}`
+- Simplify complex expressions: `(.a + .b) as $sum | .c as $other | {sum: $sum, ratio: ($sum / $other)}`
+
 ### Construction
 
 #### Object Construction
@@ -523,6 +553,10 @@ tq '{name, tier: (if .premium then "Premium" else "Free" end)}'  # In objects
 # Error handling
 tq '.user.email? // "no email"'        # Optional access with default
 tq 'try .field catch "default"'        # Catch errors
+
+# Variables
+tq '.age as $a | {name, age: $a, next: ($a + 1)}'  # Bind and reuse
+tq '.price as $p | .qty as $q | {total: ($p * $q)}'  # Multiple variables
 
 # Construction
 tq '{name, age}'                       # Select fields
