@@ -372,9 +372,34 @@ tq '"\(.name) is \(.age) years old"' data.toon
 ```
 
 ### Conditionals & Logic
-- `if-then-else` - Conditional expressions
-- `select(expr)` - Filter by condition
-- `//` - Alternative operator
+
+#### if-then-else Expressions
+Conditional logic for complex decision making:
+
+```bash
+# Basic conditional
+tq 'if .age > 18 then "adult" else "minor" end' data.toon
+
+# With elif (else if)
+tq 'if .score >= 90 then "A" elif .score >= 80 then "B" else "C" end' data.toon
+
+# Nested conditionals
+tq 'if .active then (if .premium then "premium" else "standard" end) else "inactive" end' data.toon
+
+# In object construction
+tq '{name, status: (if .active then "Active" else "Inactive" end)}' data.toon
+
+# In string interpolation
+tq '"\(.name): \(if .verified then "✓" else "✗" end)"' data.toon
+
+# With logical operators
+tq 'if .age > 18 and .verified then "allowed" else "denied" end' data.toon
+```
+
+#### Other Conditional Tools
+- `select(expr)` - Filter by condition (keep only matching items)
+- `//` - Alternative operator (use default if null/false)
+- `empty` - Return nothing (useful with conditionals for filtering)
 
 ### Construction
 
@@ -470,6 +495,10 @@ tq '.name | ascii_upcase'              # Convert to uppercase
 tq '.url | ltrimstr("https://")'       # Remove prefix
 tq '.text | gsub("foo"; "bar")'        # Replace all occurrences
 tq '"\(.name) <\(.email)>"'            # String interpolation
+
+# Conditionals
+tq 'if .age > 18 then "adult" else "minor" end'  # Basic conditional
+tq '{name, tier: (if .premium then "Premium" else "Free" end)}'  # In objects
 
 # Construction
 tq '{name, age}'                       # Select fields

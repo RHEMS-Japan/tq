@@ -1082,7 +1082,262 @@ $ tq '([.employees[].salary] | add) / (.employees | length)' testdata/company.to
 95000
 ```
 
-## 7. Advanced Examples
+## 7. Conditionals
+
+`tq` supports full conditional logic with if-then-else expressions, including elif and nested conditions.
+
+### Basic if-then-else
+
+```bash
+# Simple conditional
+$ tq '.employees[0] | if .salary > 90000 then "high salary" else "normal salary" end' testdata/company.toon
+high salary
+
+# Numeric comparison
+$ tq '.users[] | if .age >= 30 then .name else empty end' testdata/users.toon
+Bob
+---
+Charlie
+
+# String comparison
+$ tq '.employees[] | if .role == "Manager" then .name else empty end' testdata/company.toon
+Charlie Brown
+
+# Boolean check
+$ tq '.employees[] | if .active then "\(.name) is active" else "\(.name) is inactive" end' testdata/company.toon
+Alice Smith is active
+---
+Bob Johnson is active
+---
+Charlie Brown is active
+---
+Diana Prince is inactive
+---
+Eve Wilson is active
+```
+
+### elif (else if) Chains
+
+```bash
+# Grade by score
+$ tq '.employees[] | {name, level: (if .salary >= 100000 then "Senior" elif .salary >= 90000 then "Mid" else "Junior" end)}' testdata/company.toon
+name: Alice Smith
+level: Mid
+---
+name: Bob Johnson
+level: Junior
+---
+name: Charlie Brown
+level: Senior
+---
+name: Diana Prince
+level: Mid
+---
+name: Eve Wilson
+level: Junior
+
+# Multiple conditions
+$ tq '.employees[] | if .salary > 100000 then "A" elif .salary > 95000 then "B" elif .salary > 85000 then "C" else "D" end' testdata/company.toon
+B
+---
+D
+---
+A
+---
+B
+---
+C
+```
+
+### Nested Conditionals
+
+```bash
+# Nested if-then-else
+$ tq '.employees[] | if .active then (if .salary > 90000 then "active-high" else "active-normal" end) else "inactive" end' testdata/company.toon
+active-high
+---
+active-normal
+---
+active-high
+---
+inactive
+---
+active-normal
+
+# Complex nesting with object construction
+$ tq '.employees[] | {name, category: (if .role == "Engineer" then (if .salary > 95000 then "Senior Engineer" else "Engineer" end) elif .role == "Manager" then "Management" else .role end)}' testdata/company.toon
+name: Alice Smith
+category: Engineer
+---
+name: Bob Johnson
+category: Designer
+---
+name: Charlie Brown
+category: Management
+---
+name: Diana Prince
+category: Senior Engineer
+---
+name: Eve Wilson
+category: Designer
+```
+
+### Conditionals with Logical Operators
+
+```bash
+# AND operator
+$ tq '.employees[] | if .active and .salary > 90000 then .name else empty end' testdata/company.toon
+Alice Smith
+---
+Charlie Brown
+
+# OR operator
+$ tq '.employees[] | if .role == "Engineer" or .role == "Manager" then {name, role} else empty end' testdata/company.toon
+name: Alice Smith
+role: Engineer
+---
+name: Charlie Brown
+role: Manager
+---
+name: Diana Prince
+role: Engineer
+
+# Combined logic
+$ tq '.employees[] | if (.role == "Engineer" and .salary > 90000) or .role == "Manager" then "\(.name) - Leadership Track" else "\(.name) - Individual Contributor" end' testdata/company.toon
+Alice Smith - Leadership Track
+---
+Bob Johnson - Individual Contributor
+---
+Charlie Brown - Leadership Track
+---
+Diana Prince - Leadership Track
+---
+Eve Wilson - Individual Contributor
+```
+
+### Conditionals in Object Construction
+
+```bash
+# Add conditional fields
+$ tq '.employees[] | {name, role, status: (if .active then "✓ Active" else "✗ Inactive" end)}' testdata/company.toon
+name: Alice Smith
+role: Engineer
+status: ✓ Active
+---
+name: Bob Johnson
+role: Designer
+status: ✓ Active
+---
+name: Charlie Brown
+role: Manager
+status: ✓ Active
+---
+name: Diana Prince
+role: Engineer
+status: ✗ Inactive
+---
+name: Eve Wilson
+role: Designer
+status: ✓ Active
+
+# Multiple conditional fields
+$ tq '.employees[] | {name, tier: (if .salary >= 100000 then "A" else "B" end), employment: (if .active then "Current" else "Former" end)}' testdata/company.toon
+name: Alice Smith
+tier: B
+employment: Current
+---
+name: Bob Johnson
+tier: B
+employment: Current
+---
+name: Charlie Brown
+tier: A
+employment: Current
+---
+name: Diana Prince
+tier: B
+employment: Former
+---
+name: Eve Wilson
+tier: B
+employment: Current
+```
+
+### Conditionals in String Interpolation
+
+```bash
+# Status messages
+$ tq '.employees[] | "\(.name): \(if .active then "Currently employed as \(.role)" else "No longer with company" end)"' testdata/company.toon
+Alice Smith: Currently employed as Engineer
+---
+Bob Johnson: Currently employed as Designer
+---
+Charlie Brown: Currently employed as Manager
+---
+Diana Prince: No longer with company
+---
+Eve Wilson: Currently employed as Designer
+
+# Format with symbols
+$ tq '.employees[] | "\(if .active then "✓" else "✗" end) \(.name) - \(.role)"' testdata/company.toon
+✓ Alice Smith - Engineer
+---
+✓ Bob Johnson - Designer
+---
+✓ Charlie Brown - Manager
+---
+✗ Diana Prince - Engineer
+---
+✓ Eve Wilson - Designer
+
+# Complex formatting
+$ tq '.employees[] | "[\(if .salary >= 100000 then "HIGH" elif .salary >= 90000 then "MID" else "STD" end)] \(.name) - $\(.salary)"' testdata/company.toon
+[MID] Alice Smith - $95000
+---
+[STD] Bob Johnson - $85000
+---
+[HIGH] Charlie Brown - $110000
+---
+[MID] Diana Prince - $98000
+---
+[STD] Eve Wilson - $87000
+```
+
+### Practical Examples
+
+#### Classify and report
+
+```bash
+# Employee performance tiers
+$ tq '.employees | map({name, performance: (if .salary > 95000 and .active then "Exceeds Expectations" elif .salary > 85000 and .active then "Meets Expectations" elif .active then "Developing" else "Inactive" end)})' testdata/company.toon
+[5]{name,performance}:
+  Alice Smith,Meets Expectations
+  Bob Johnson,Developing
+  Charlie Brown,Exceeds Expectations
+  Diana Prince,Inactive
+  Eve Wilson,Meets Expectations
+```
+
+#### Generate reports
+
+```bash
+# Summary with conditionals
+$ tq '{totalEmployees: (.employees | length), active: ([.employees[] | select(.active)] | length), highEarners: ([.employees[] | select(.salary > 95000)] | length), status: (if ([.employees[] | select(.active)] | length) > 3 then "Fully Staffed" else "Hiring" end)}' testdata/company.toon
+totalEmployees: 5
+active: 4
+highEarners: 3
+status: Fully Staffed
+```
+
+#### Filter and transform
+
+```bash
+# Conditional transformation
+$ tq '[.employees[] | if .active then {name, role, status: "active", adjustedSalary: (.salary * 1.1)} else {name, role, status: "inactive", adjustedSalary: .salary} end]' testdata/company.toon --json
+[{"name":"Alice Smith","role":"Engineer","status":"active","adjustedSalary":104500},{"name":"Bob Johnson","role":"Designer","status":"active","adjustedSalary":93500},{"name":"Charlie Brown","role":"Manager","status":"active","adjustedSalary":121000},{"name":"Diana Prince","role":"Engineer","status":"inactive","adjustedSalary":98000},{"name":"Eve Wilson","role":"Designer","status":"active","adjustedSalary":95700}]
+```
+
+## 8. Advanced Examples
 
 ### Pipe multiple operations
 
